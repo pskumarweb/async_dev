@@ -1298,6 +1298,14 @@ jobs:
           echo "Includes:"
           echo "- OpenAPI specification"
           echo "- Project README"
+    - name: Commit & push scaffold to repo
+      run: |
+        git config --global user.name "github-actions"
+        git config --global user.email "github-actions@github.com"
+        git add -A
+        git commit -m "chore: scaffold repository structure" || echo "Nothing to commit"
+        git push
+
 
   # Job 9: Security Scanning
   security-scan:
@@ -1371,10 +1379,3 @@ jobs:
           echo "✅ Monitoring configuration created!"
           echo ""
           echo "📦 Config uploaded as 'monitoring-setup' artifact"
-- name: Commit & push scaffold to repo
-  run: |
-    git config --global user.name "github-actions"
-    git config --global user.email "github-actions@github.com"
-    git add -A
-    git commit -m "chore: scaffold repository structure" || echo "Nothing to commit"
-    git push
