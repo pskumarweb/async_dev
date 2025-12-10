@@ -908,6 +908,7 @@ jobs:
           EOF
           
           # Create seed script
+          mkdir -p scripts/seed/
           cat > scripts/seed/seed-dev-data.sql << 'EOF'
           -- Insert sample shop
           INSERT INTO shops (id, name, location, timezone) VALUES
