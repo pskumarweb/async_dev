@@ -53,6 +53,21 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           
+      - name: Create project structure
+        run: |
+          # Create directory structure
+          mkdir -p apps/frontend
+          mkdir -p apps/backend
+          mkdir -p apps/file-storage
+          mkdir -p apps/payment-service
+          mkdir -p packages/ui packages/lib packages/shared-types
+          mkdir -p infra/terraform infra/docker
+          mkdir -p scripts/seed scripts/migration
+          mkdir -p tests/unit tests/integration tests/e2e
+          mkdir -p docs/api docs/guides
+          
+          echo "✅ Repository structure created"
+          
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
@@ -62,18 +77,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          
-      - name: Create project structure
-        run: |
-          # Create directory structure
-          mkdir -p apps/frontend apps/backend apps/file-storage apps/payment-service
-          mkdir -p packages/ui packages/lib packages/shared-types
-          mkdir -p infra/terraform infra/docker
-          mkdir -p scripts/seed scripts/migration
-          mkdir -p tests/unit tests/integration tests/e2e
-          mkdir -p docs/api docs/guides
-          
-          echo "✅ Repository structure created"
           
       - name: Initialize workspace
         run: |
