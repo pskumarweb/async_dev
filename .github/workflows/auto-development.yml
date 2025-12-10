@@ -46,7 +46,6 @@ jobs:
     name: Setup Repository Structure
     runs-on: ubuntu-latest
     # if: github.event_name == 'workflow_dispatch' && github.event.inputs.task == 'scaffold'
-    if: github.event.inputs.task == 'scaffold'
     
     steps:
       - name: Checkout code
@@ -174,7 +173,7 @@ jobs:
   develop-frontend:
     name: Develop Frontend (Next.js)
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' && (github.event.inputs.component == 'all' || github.event.inputs.component == 'frontend')
+#    if: github.event_name == 'workflow_dispatch' && (github.event.inputs.component == 'all' || github.event.inputs.component == 'frontend')
     
     steps:
       - name: Checkout code
@@ -277,7 +276,7 @@ jobs:
   develop-backend:
     name: Develop Backend (NestJS)
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' && (github.event.inputs.component == 'all' || github.event.inputs.component == 'backend')
+    # if: github.event_name == 'workflow_dispatch' && (github.event.inputs.component == 'all' || github.event.inputs.component == 'backend')
     
     steps:
       - name: Checkout code
@@ -429,7 +428,7 @@ jobs:
   develop-file-storage:
     name: Develop File Storage Service
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' && (github.event.inputs.component == 'all' || github.event.inputs.component == 'file-storage')
+    # if: github.event_name == 'workflow_dispatch' && (github.event.inputs.component == 'all' || github.event.inputs.component == 'file-storage')
     
     steps:
       - name: Checkout code
@@ -596,7 +595,7 @@ jobs:
   develop-payment-service:
     name: Develop Payment Service
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' && (github.event.inputs.component == 'all' || github.event.inputs.component == 'payment-service')
+    # if: github.event_name == 'workflow_dispatch' && (github.event.inputs.component == 'all' || github.event.inputs.component == 'payment-service')
     
     steps:
       - name: Checkout code
@@ -751,7 +750,7 @@ jobs:
   setup-database:
     name: Setup Database Schema
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' && (github.event.inputs.component == 'all' || github.event.inputs.component == 'database')
+    # if: github.event_name == 'workflow_dispatch' && (github.event.inputs.component == 'all' || github.event.inputs.component == 'database')
     
     steps:
       - name: Checkout code
@@ -990,7 +989,7 @@ jobs:
   ci-pipeline:
     name: Continuous Integration
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    # if: github.event_name == 'push' || github.event_name == 'pull_request'
     
     steps:
       - name: Checkout code
