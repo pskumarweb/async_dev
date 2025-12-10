@@ -32,8 +32,8 @@ on:
           - deploy
 
 permissions:
-  contents: read
-  actions: read
+  contents: write
+  actions: write
   security-events: write
 
 env:
@@ -52,7 +52,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: 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
           
       - name: Create project structure
         run: |
@@ -169,6 +169,20 @@ jobs:
           echo "   git add -A"
           echo "   git commit -m 'chore: initialize repository structure'"
           echo "   git push"
+          
+      - name: Commit and push generated files
+        run: |
+          echo "✅ Project structure created successfully!"
+          echo ""
+          echo "📦 Generated files have been uploaded as artifacts."
+          echo ""
+          echo "To use the generated code:"
+          echo "1. Download the 'project-structure' artifact from this workflow run"
+          echo "2. Extract it to your local repository"
+          echo "3. Commit and push manually:"
+          echo "   git add -A"
+          echo "   git commit -m 'chore: initialize repository structure'"
+          echo "   git push"
 
   # Job 2: Frontend Development
   develop-frontend:
@@ -179,6 +193,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false   # important so checkout doesn’t override credentials
+          fetch-depth: 0
         
       - name: Install pnpm
         uses: pnpm/action-setup@v2
@@ -284,6 +301,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false   # important so checkout doesn’t override credentials
+          fetch-depth: 0
         
       - name: Install pnpm
         uses: pnpm/action-setup@v2
@@ -439,6 +459,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false   # important so checkout doesn’t override credentials
+          fetch-depth: 0
         
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -606,6 +629,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false   # important so checkout doesn’t override credentials
+          fetch-depth: 0
         
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -761,6 +787,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false   # important so checkout doesn’t override credentials
+          fetch-depth: 0
         
       - name: Create migration scripts
         run: |
@@ -1002,6 +1031,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false   # important so checkout doesn’t override credentials
+          fetch-depth: 0
         
       - name: Install pnpm
         uses: pnpm/action-setup@v2
@@ -1054,6 +1086,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false   # important so checkout doesn’t override credentials
+          fetch-depth: 0
         
       - name: Generate OpenAPI documentation
         run: |
@@ -1298,13 +1333,6 @@ jobs:
           echo "Includes:"
           echo "- OpenAPI specification"
           echo "- Project README"
-    - name: Commit & push scaffold to repo
-      run: |
-        git config --global user.name "github-actions"
-        git config --global user.email "github-actions@github.com"
-        git add -A
-        git commit -m "chore: scaffold repository structure" || echo "Nothing to commit"
-        git push
 
 
   # Job 9: Security Scanning
@@ -1316,6 +1344,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false   # important so checkout doesn’t override credentials
+          fetch-depth: 0
         
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
@@ -1340,6 +1371,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false   # important so checkout doesn’t override credentials
+          fetch-depth: 0
         
       - name: Create monitoring configuration
         run: |
