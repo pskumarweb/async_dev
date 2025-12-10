@@ -191,6 +191,7 @@ jobs:
           
       - name: Initialize Next.js app
         run: |
+          mkdir -p apps/frontend
           cd apps/frontend
           
           if [ ! -f "package.json" ]; then
@@ -207,6 +208,7 @@ jobs:
           
       - name: Generate frontend components
         run: |
+          mkdir -p apps/frontend
           cd apps/frontend
           
           # Create src structure
@@ -294,6 +296,7 @@ jobs:
           
       - name: Initialize NestJS app
         run: |
+          mkdir -p apps/backend
           cd apps/backend
           
           if [ ! -f "package.json" ]; then
@@ -312,6 +315,7 @@ jobs:
           
       - name: Generate backend modules
         run: |
+          mkdir -p apps/backend
           cd apps/backend
           
           # Generate modules
@@ -338,6 +342,7 @@ jobs:
           
       - name: Create database entities
         run: |
+          mkdir -p apps/backend
           cd apps/backend/src
           
           mkdir -p entities
