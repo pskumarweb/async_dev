@@ -52,7 +52,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          token: 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
+          token: "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"
           
       - name: Create project structure
         run: |
@@ -1221,7 +1221,7 @@ jobs:
           
           1. Clone the repository
           ```bash
-          git clone https://github.com/yourusername/aviosync.git
+          git clone https://github.com/pskumarweb/async_dev.git
           cd aviosync
           ```
           
