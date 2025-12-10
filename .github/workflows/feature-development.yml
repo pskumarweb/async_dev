@@ -29,7 +29,7 @@ jobs:
   develop-work-request-form:
     name: Develop Work Request Form
     runs-on: ubuntu-latest
-    if: github.event.inputs.feature == 'work-request-form'
+    # if: github.event.inputs.feature == 'work-request-form'
     
     steps:
       - uses: actions/checkout@v4
@@ -41,7 +41,7 @@ jobs:
       
       - name: Generate work request components
         run: |
-          mkdir -p apps/frontend/src/app/work-requests
+          mkdir -p apps/frontend/src/app/work-requests/new
           
           cat > apps/frontend/src/app/work-requests/new/page.tsx << 'EOF'
           'use client';
@@ -156,7 +156,7 @@ jobs:
   develop-shop-dashboard:
     name: Develop Shop Dashboard
     runs-on: ubuntu-latest
-    if: github.event.inputs.feature == 'shop-dashboard'
+    # if: github.event.inputs.feature == 'shop-dashboard'
     
     steps:
       - uses: actions/checkout@v4
@@ -267,7 +267,7 @@ jobs:
   develop-user-authentication:
     name: Develop User Authentication
     runs-on: ubuntu-latest
-    if: github.event.inputs.feature == 'user-authentication'
+    # if: github.event.inputs.feature == 'user-authentication'
     
     steps:
       - uses: actions/checkout@v4
@@ -400,7 +400,7 @@ jobs:
   develop-file-upload:
     name: Develop File Upload System
     runs-on: ubuntu-latest
-    if: github.event.inputs.feature == 'file-upload'
+    # if: github.event.inputs.feature == 'file-upload'
     
     steps:
       - uses: actions/checkout@v4
@@ -548,7 +548,7 @@ jobs:
   develop-messaging-system:
     name: Develop Messaging System
     runs-on: ubuntu-latest
-    if: github.event.inputs.feature == 'messaging-system'
+    # if: github.event.inputs.feature == 'messaging-system'
     
     steps:
       - uses: actions/checkout@v4
