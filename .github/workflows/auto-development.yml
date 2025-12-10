@@ -45,7 +45,8 @@ jobs:
   setup-repository:
     name: Setup Repository Structure
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.task == 'scaffold'
+    # if: github.event_name == 'workflow_dispatch' && github.event.inputs.task == 'scaffold'
+    if: github.event.inputs.task == 'scaffold'
     
     steps:
       - name: Checkout code
