@@ -1327,7 +1327,7 @@ jobs:
   setup-monitoring:
     name: Setup Monitoring & Analytics
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
+    # if: github.event_name == 'workflow_dispatch'
     
     steps:
       - name: Checkout code
