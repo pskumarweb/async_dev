@@ -1,0 +1,630 @@
+name: Feature Development Automation
+
+on:
+  workflow_dispatch:
+    inputs:
+      feature:
+        description: 'Feature to develop'
+        required: true
+        type: choice
+        options:
+          - work-request-form
+          - shop-dashboard
+          - task-management
+          - messaging-system
+          - file-upload
+          - billing-estimates
+          - user-authentication
+          - notifications
+          - analytics-dashboard
+
+permissions:
+  contents: read
+  actions: read
+      
+env:
+  NODE_VERSION: '20.x'
+
+jobs:
+  develop-work-request-form:
+    name: Develop Work Request Form
+    runs-on: ubuntu-latest
+    if: github.event.inputs.feature == 'work-request-form'
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      
+      - name: Generate work request components
+        run: |
+          mkdir -p apps/frontend/src/app/work-requests
+          
+          cat > apps/frontend/src/app/work-requests/new/page.tsx << 'EOF'
+          'use client';
+          
+          import { useState } from 'react';
+          import { useRouter } from 'next/navigation';
+          
+          export default function NewWorkRequest() {
+            const router = useRouter();
+            const [formData, setFormData] = useState({
+              title: '',
+              description: '',
+              priority: 'medium',
+              aircraftId: '',
+            });
+          
+            const handleSubmit = async (e: React.FormEvent) => {
+              e.preventDefault();
+              
+              try {
+                const response = await fetch('/api/work-requests', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(formData),
+                });
+                
+                if (response.ok) {
+                  router.push('/dashboard');
+                }
+              } catch (error) {
+                console.error('Failed to create work request:', error);
+              }
+            };
+          
+            return (
+              <div className="max-w-2xl mx-auto p-6">
+                <h1 className="text-3xl font-bold mb-6">New Work Request</h1>
+                
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      Title *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      className="w-full px-4 py-2 border rounded-lg"
+                      value={formData.title}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    />
+                  </div>
+          
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      Description *
+                    </label>
+                    <textarea
+                      required
+                      rows={6}
+                      className="w-full px-4 py-2 border rounded-lg"
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    />
+                  </div>
+          
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      Priority
+                    </label>
+                    <select
+                      className="w-full px-4 py-2 border rounded-lg"
+                      value={formData.priority}
+                      onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                    >
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                    </select>
+                  </div>
+          
+                  <div className="flex gap-4">
+                    <button
+                      type="submit"
+                      className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    >
+                      Submit Request
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => router.back()}
+                      className="px-6 py-2 border rounded-lg hover:bg-gray-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            );
+          }
+          EOF
+          
+          echo "✅ Work request form created"
+          
+      - name: Commit changes
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          
+          
+          
+
+  develop-shop-dashboard:
+    name: Develop Shop Dashboard
+    runs-on: ubuntu-latest
+    if: github.event.inputs.feature == 'shop-dashboard'
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Generate shop dashboard
+        run: |
+          mkdir -p apps/frontend/src/app/shop/dashboard
+          
+          cat > apps/frontend/src/app/shop/dashboard/page.tsx << 'EOF'
+          'use client';
+          
+          import { useEffect, useState } from 'react';
+          
+          interface WorkRequest {
+            id: string;
+            title: string;
+            priority: string;
+            status: string;
+            created_at: string;
+          }
+          
+          export default function ShopDashboard() {
+            const [requests, setRequests] = useState<WorkRequest[]>([]);
+            const [filter, setFilter] = useState('all');
+          
+            useEffect(() => {
+              fetchRequests();
+            }, [filter]);
+          
+            const fetchRequests = async () => {
+              try {
+                const response = await fetch(`/api/shop/requests?status=${filter}`);
+                const data = await response.json();
+                setRequests(data);
+              } catch (error) {
+                console.error('Failed to fetch requests:', error);
+              }
+            };
+          
+            return (
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h1 className="text-3xl font-bold">Work Requests</h1>
+                  
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setFilter('new')}
+                      className={`px-4 py-2 rounded-lg ${filter === 'new' ? 'bg-blue-600 text-white' : 'bg-gray-100'}`}
+                    >
+                      New
+                    </button>
+                    <button
+                      onClick={() => setFilter('in_progress')}
+                      className={`px-4 py-2 rounded-lg ${filter === 'in_progress' ? 'bg-blue-600 text-white' : 'bg-gray-100'}`}
+                    >
+                      In Progress
+                    </button>
+                    <button
+                      onClick={() => setFilter('all')}
+                      className={`px-4 py-2 rounded-lg ${filter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100'}`}
+                    >
+                      All
+                    </button>
+                  </div>
+                </div>
+          
+                <div className="grid gap-4">
+                  {requests.map((request) => (
+                    <div key={request.id} className="border rounded-lg p-4 hover:shadow-md transition">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="font-semibold text-lg">{request.title}</h3>
+                          <p className="text-sm text-gray-500">
+                            {new Date(request.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <span className={`px-3 py-1 rounded-full text-xs ${
+                            request.priority === 'high' ? 'bg-red-100 text-red-800' :
+                            request.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-green-100 text-green-800'
+                          }`}>
+                            {request.priority}
+                          </span>
+                          <span className="px-3 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                            {request.status}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          }
+          EOF
+          
+          echo "✅ Shop dashboard created"
+          
+      - name: Commit changes
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          
+          
+          
+
+  develop-user-authentication:
+    name: Develop User Authentication
+    runs-on: ubuntu-latest
+    if: github.event.inputs.feature == 'user-authentication'
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Generate auth components
+        run: |
+          mkdir -p apps/backend/src/auth
+          
+          cat > apps/backend/src/auth/auth.controller.ts << 'EOF'
+          import { Controller, Post, Body, UnauthorizedException } from '@nestjs/common';
+          import { AuthService } from './auth.service';
+          
+          @Controller('api/v1/auth')
+          export class AuthController {
+            constructor(private authService: AuthService) {}
+          
+            @Post('register')
+            async register(@Body() body: any) {
+              return this.authService.register(body);
+            }
+          
+            @Post('login')
+            async login(@Body() body: { email: string; password: string }) {
+              const user = await this.authService.validateUser(body.email, body.password);
+              
+              if (!user) {
+                throw new UnauthorizedException('Invalid credentials');
+              }
+              
+              return this.authService.login(user);
+            }
+          
+            @Post('refresh')
+            async refresh(@Body() body: { refresh_token: string }) {
+              return this.authService.refreshToken(body.refresh_token);
+            }
+          }
+          EOF
+          
+          cat > apps/backend/src/auth/auth.service.ts << 'EOF'
+          import { Injectable } from '@nestjs/common';
+          import { JwtService } from '@nestjs/jwt';
+          import * as bcrypt from 'bcrypt';
+          
+          @Injectable()
+          export class AuthService {
+            constructor(private jwtService: JwtService) {}
+          
+            async register(userData: any) {
+              const hashedPassword = await bcrypt.hash(userData.password, 10);
+              
+              // Save user to database (implement with your ORM)
+              const user = {
+                id: 'generated-uuid',
+                email: userData.email,
+                name: userData.name,
+                role: userData.role,
+              };
+              
+              return {
+                user,
+                token: this.generateToken(user),
+              };
+            }
+          
+            async validateUser(email: string, password: string) {
+              // Fetch user from database
+              const user = { id: '1', email, password_hash: 'hashed', name: 'User', role: 'pilot' };
+              
+              const isValid = await bcrypt.compare(password, user.password_hash);
+              
+              if (!isValid) return null;
+              
+              return user;
+            }
+          
+            async login(user: any) {
+              return {
+                user: {
+                  id: user.id,
+                  email: user.email,
+                  name: user.name,
+                  role: user.role,
+                },
+                token: this.generateToken(user),
+                refresh_token: this.generateRefreshToken(user),
+              };
+            }
+          
+            private generateToken(user: any) {
+              return this.jwtService.sign({
+                sub: user.id,
+                email: user.email,
+                role: user.role,
+              });
+            }
+          
+            private generateRefreshToken(user: any) {
+              return this.jwtService.sign(
+                { sub: user.id },
+                { expiresIn: '7d' }
+              );
+            }
+          
+            async refreshToken(refreshToken: string) {
+              try {
+                const payload = this.jwtService.verify(refreshToken);
+                const user = { id: payload.sub }; // Fetch from DB
+                
+                return {
+                  token: this.generateToken(user),
+                };
+              } catch {
+                throw new Error('Invalid refresh token');
+              }
+            }
+          }
+          EOF
+          
+          echo "✅ Authentication components created"
+          
+      - name: Commit changes
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          
+          
+          
+
+  develop-file-upload:
+    name: Develop File Upload System
+    runs-on: ubuntu-latest
+    if: github.event.inputs.feature == 'file-upload'
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Generate file upload components
+        run: |
+          mkdir -p apps/frontend/src/components/upload
+          
+          cat > apps/frontend/src/components/upload/FileUploader.tsx << 'EOF'
+          'use client';
+          
+          import { useState, useRef } from 'react';
+          
+          interface FileUploaderProps {
+            onUploadComplete: (files: any[]) => void;
+            maxFiles?: number;
+            acceptedTypes?: string[];
+          }
+          
+          export default function FileUploader({ 
+            onUploadComplete, 
+            maxFiles = 10,
+            acceptedTypes = ['image/jpeg', 'image/png', 'video/mp4', 'application/pdf']
+          }: FileUploaderProps) {
+            const [files, setFiles] = useState<File[]>([]);
+            const [uploading, setUploading] = useState(false);
+            const [progress, setProgress] = useState<Record<string, number>>({});
+            const fileInputRef = useRef<HTMLInputElement>(null);
+          
+            const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+              const selectedFiles = Array.from(e.target.files || []);
+              
+              const validFiles = selectedFiles.filter(file => 
+                acceptedTypes.includes(file.type) && file.size <= 100 * 1024 * 1024
+              );
+              
+              setFiles(prev => [...prev, ...validFiles].slice(0, maxFiles));
+            };
+          
+            const uploadFile = async (file: File) => {
+              // Get presigned URL
+              const presignResponse = await fetch('/api/files/presign', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  filename: file.name,
+                  mimetype: file.type,
+                  size: file.size,
+                }),
+              });
+              
+              const { uploadUrl, fileId } = await presignResponse.json();
+              
+              // Upload to storage service
+              const formData = new FormData();
+              formData.append('file', file);
+              
+              const uploadResponse = await fetch(uploadUrl, {
+                method: 'POST',
+                body: formData,
+              });
+              
+              return uploadResponse.json();
+            };
+          
+            const handleUpload = async () => {
+              setUploading(true);
+              
+              try {
+                const uploadedFiles = await Promise.all(
+                  files.map(async (file) => {
+                    const result = await uploadFile(file);
+                    setProgress(prev => ({ ...prev, [file.name]: 100 }));
+                    return result;
+                  })
+                );
+                
+                onUploadComplete(uploadedFiles);
+                setFiles([]);
+                setProgress({});
+              } catch (error) {
+                console.error('Upload failed:', error);
+              } finally {
+                setUploading(false);
+              }
+            };
+          
+            return (
+              <div className="space-y-4">
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-500"
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept={acceptedTypes.join(',')}
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                  
+                  <div className="text-gray-600">
+                    <p className="font-medium">Click to upload files</p>
+                    <p className="text-sm">or drag and drop</p>
+                    <p className="text-xs mt-2">Max {maxFiles} files, 100MB each</p>
+                  </div>
+                </div>
+          
+                {files.length > 0 && (
+                  <div className="space-y-2">
+                    {files.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                        <span className="text-sm truncate">{file.name}</span>
+                        <span className="text-xs text-gray-500">
+                          {(file.size / 1024 / 1024).toFixed(2)} MB
+                        </span>
+                      </div>
+                    ))}
+                    
+                    <button
+                      onClick={handleUpload}
+                      disabled={uploading}
+                      className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      {uploading ? 'Uploading...' : 'Upload Files'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          }
+          EOF
+          
+          echo "✅ File upload component created"
+          
+      - name: Commit changes
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          
+          
+          
+
+  develop-messaging-system:
+    name: Develop Messaging System
+    runs-on: ubuntu-latest
+    if: github.event.inputs.feature == 'messaging-system'
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Generate messaging components
+        run: |
+          mkdir -p apps/backend/src/messages
+          
+          cat > apps/backend/src/messages/messages.gateway.ts << 'EOF'
+          import {
+            WebSocketGateway,
+            WebSocketServer,
+            SubscribeMessage,
+            OnGatewayConnection,
+            OnGatewayDisconnect,
+          } from '@nestjs/websockets';
+          import { Server, Socket } from 'socket.io';
+          
+          @WebSocketGateway({ cors: true })
+          export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect {
+            @WebSocketServer()
+            server: Server;
+          
+            private connectedUsers = new Map<string, string>();
+          
+            handleConnection(client: Socket) {
+              console.log(`Client connected: ${client.id}`);
+            }
+          
+            handleDisconnect(client: Socket) {
+              console.log(`Client disconnected: ${client.id}`);
+              this.connectedUsers.delete(client.id);
+            }
+          
+            @SubscribeMessage('join-conversation')
+            handleJoinConversation(client: Socket, conversationId: string) {
+              client.join(`conversation-${conversationId}`);
+              return { event: 'joined', conversationId };
+            }
+          
+            @SubscribeMessage('send-message')
+            handleSendMessage(client: Socket, payload: any) {
+              const { conversationId, message } = payload;
+              
+              // Save message to database
+              const savedMessage = {
+                id: 'generated-id',
+                conversationId,
+                senderId: 'user-id',
+                body: message,
+                createdAt: new Date(),
+              };
+              
+              // Broadcast to conversation room
+              this.server
+                .to(`conversation-${conversationId}`)
+                .emit('new-message', savedMessage);
+              
+              return savedMessage;
+            }
+          
+            @SubscribeMessage('typing')
+            handleTyping(client: Socket, payload: any) {
+              const { conversationId, userId } = payload;
+              
+              client.to(`conversation-${conversationId}`).emit('user-typing', { userId });
+            }
+          }
+          EOF
+          
+          echo "✅ Messaging system created"
+          
+      - name: Commit changes
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          
+          
+          

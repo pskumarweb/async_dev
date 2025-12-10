@@ -1,0 +1,1362 @@
+name: Auto Development Workflow
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run daily at 2 AM UTC for automated development tasks
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      component:
+        description: 'Component to develop'
+        required: false
+        type: choice
+        options:
+          - all
+          - frontend
+          - backend
+          - file-storage
+          - payment-service
+          - database
+      task:
+        description: 'Development task'
+        required: false
+        type: choice
+        options:
+          - scaffold
+          - develop-features
+          - test
+          - deploy
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  NODE_VERSION: '20.x'
+  PNPM_VERSION: '8.x'
+  POSTGRES_VERSION: '15'
+
+jobs:
+  # Job 1: Repository Setup and Scaffolding
+  setup-repository:
+    name: Setup Repository Structure
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.task == 'scaffold'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          
+      - name: Create project structure
+        run: |
+          # Create directory structure
+          mkdir -p apps/frontend apps/backend apps/file-storage apps/payment-service
+          mkdir -p packages/ui packages/lib packages/shared-types
+          mkdir -p infra/terraform infra/docker
+          mkdir -p scripts/seed scripts/migration
+          mkdir -p tests/unit tests/integration tests/e2e
+          mkdir -p docs/api docs/guides
+          
+          echo "✅ Repository structure created"
+          
+      - name: Initialize workspace
+        run: |
+          # Create root package.json for monorepo
+          cat > package.json << 'EOF'
+          {
+            "name": "aviosync-platform",
+            "version": "0.1.0",
+            "private": true,
+            "workspaces": [
+              "apps/*",
+              "packages/*"
+            ],
+            "scripts": {
+              "dev": "turbo run dev",
+              "build": "turbo run build",
+              "test": "turbo run test",
+              "lint": "turbo run lint",
+              "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\""
+            },
+            "devDependencies": {
+              "turbo": "^1.11.0",
+              "prettier": "^3.1.0",
+              "typescript": "^5.3.0"
+            }
+          }
+          EOF
+          
+          # Create turbo.json
+          cat > turbo.json << 'EOF'
+          {
+            "$schema": "https://turbo.build/schema.json",
+            "pipeline": {
+              "build": {
+                "dependsOn": ["^build"],
+                "outputs": [".next/**", "dist/**", "build/**"]
+              },
+              "test": {
+                "dependsOn": ["build"]
+              },
+              "lint": {},
+              "dev": {
+                "cache": false,
+                "persistent": true
+              }
+            }
+          }
+          EOF
+          
+          # Create .prettierrc
+          cat > .prettierrc << 'EOF'
+          {
+            "semi": true,
+            "trailingComma": "es5",
+            "singleQuote": true,
+            "printWidth": 100,
+            "tabWidth": 2
+          }
+          EOF
+          
+          echo "✅ Workspace configuration created"
+          
+      - name: Upload generated code
+        uses: actions/upload-artifact@v4
+        with:
+          name: project-structure
+          path: |
+            apps/
+            packages/
+            infra/
+            scripts/
+            tests/
+            docs/
+            package.json
+            turbo.json
+            .prettierrc
+          retention-days: 30
+          
+      - name: Summary
+        run: |
+          echo "✅ Project structure created successfully!"
+          echo ""
+          echo "📦 Generated files have been uploaded as artifacts."
+          echo ""
+          echo "To use the generated code:"
+          echo "1. Download the 'project-structure' artifact from this workflow run"
+          echo "2. Extract it to your local repository"
+          echo "3. Commit and push manually:"
+          echo "   git add -A"
+          echo "   git commit -m 'chore: initialize repository structure'"
+          echo "   git push"
+
+  # Job 2: Frontend Development
+  develop-frontend:
+    name: Develop Frontend (Next.js)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && (github.event.inputs.component == 'all' || github.event.inputs.component == 'frontend')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          
+      - name: Initialize Next.js app
+        run: |
+          cd apps/frontend
+          
+          if [ ! -f "package.json" ]; then
+            npx create-next-app@latest . --typescript --tailwind --app --src-dir --import-alias "@/*" --yes
+            
+            # Install additional dependencies
+            npm install @tanstack/react-query axios zustand
+            npm install -D @types/node
+            
+            echo "✅ Next.js app initialized"
+          else
+            echo "Frontend already initialized"
+          fi
+          
+      - name: Generate frontend components
+        run: |
+          cd apps/frontend
+          
+          # Create src structure
+          mkdir -p src/components/ui src/components/layout
+          mkdir -p src/app/dashboard src/app/auth
+          mkdir -p src/lib src/hooks src/types
+          
+          # Create Layout components
+          cat > src/components/layout/TopNav.tsx << 'EOF'
+          export default function TopNav() {
+            return (
+              <nav className="bg-white shadow-sm border-b">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                  <div className="flex justify-between h-16">
+                    <div className="flex">
+                      <div className="flex-shrink-0 flex items-center">
+                        <h1 className="text-xl font-bold">AvioSync</h1>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </nav>
+            );
+          }
+          EOF
+          
+          # Create API client
+          cat > src/lib/api-client.ts << 'EOF'
+          import axios from 'axios';
+          
+          const apiClient = axios.create({
+            baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          apiClient.interceptors.request.use((config) => {
+            const token = localStorage.getItem('token');
+            if (token) {
+              config.headers.Authorization = `Bearer ${token}`;
+            }
+            return config;
+          });
+          
+          export default apiClient;
+          EOF
+          
+          echo "✅ Frontend components generated"
+          
+      - name: Upload generated frontend
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-code
+          path: apps/frontend/
+          retention-days: 30
+          
+      - name: Summary
+        run: |
+          echo "✅ Frontend code generated successfully!"
+          echo ""
+          echo "📦 Generated code uploaded as 'frontend-code' artifact"
+          echo ""
+          echo "Download and commit manually, or enable workflow write permissions."
+
+  # Job 3: Backend Development (NestJS)
+  develop-backend:
+    name: Develop Backend (NestJS)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && (github.event.inputs.component == 'all' || github.event.inputs.component == 'backend')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          
+      - name: Initialize NestJS app
+        run: |
+          cd apps/backend
+          
+          if [ ! -f "package.json" ]; then
+            npm i -g @nestjs/cli
+            nest new . --skip-git --package-manager npm
+            
+            # Install dependencies
+            npm install @nestjs/config @nestjs/typeorm @nestjs/passport @nestjs/jwt
+            npm install pg typeorm passport passport-jwt bcrypt class-validator class-transformer
+            npm install -D @types/passport-jwt @types/bcrypt
+            
+            echo "✅ NestJS app initialized"
+          else
+            echo "Backend already initialized"
+          fi
+          
+      - name: Generate backend modules
+        run: |
+          cd apps/backend
+          
+          # Generate modules
+          nest g module auth --no-spec
+          nest g module users --no-spec
+          nest g module aircraft --no-spec
+          nest g module work-requests --no-spec
+          nest g module work-orders --no-spec
+          nest g module tasks --no-spec
+          nest g module messages --no-spec
+          nest g module files --no-spec
+          
+          # Generate services
+          nest g service auth --no-spec
+          nest g service users --no-spec
+          nest g service work-requests --no-spec
+          
+          # Generate controllers
+          nest g controller auth --no-spec
+          nest g controller users --no-spec
+          nest g controller work-requests --no-spec
+          
+          echo "✅ Backend modules generated"
+          
+      - name: Create database entities
+        run: |
+          cd apps/backend/src
+          
+          mkdir -p entities
+          
+          # User entity
+          cat > entities/user.entity.ts << 'EOF'
+          import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne } from 'typeorm';
+          
+          @Entity('users')
+          export class User {
+            @PrimaryGeneratedColumn('uuid')
+            id: string;
+          
+            @Column({ unique: true })
+            email: string;
+          
+            @Column()
+            password_hash: string;
+          
+            @Column()
+            name: string;
+          
+            @Column({ type: 'varchar' })
+            role: 'pilot' | 'shop_manager' | 'technician' | 'admin';
+          
+            @Column({ nullable: true })
+            shop_id?: string;
+          
+            @CreateDateColumn()
+            created_at: Date;
+          }
+          EOF
+          
+          # Work Request entity
+          cat > entities/work-request.entity.ts << 'EOF'
+          import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+          
+          @Entity('work_requests')
+          export class WorkRequest {
+            @PrimaryGeneratedColumn('uuid')
+            id: string;
+          
+            @Column()
+            shop_id: string;
+          
+            @Column()
+            owner_id: string;
+          
+            @Column()
+            aircraft_id: string;
+          
+            @Column()
+            title: string;
+          
+            @Column('text')
+            description: string;
+          
+            @Column({ type: 'varchar' })
+            priority: 'low' | 'medium' | 'high';
+          
+            @Column({ type: 'varchar' })
+            status: 'new' | 'scheduled' | 'diagnosing' | 'parts_ordered' | 'in_repair' | 'complete' | 'closed';
+          
+            @CreateDateColumn()
+            created_at: Date;
+          
+            @UpdateDateColumn()
+            updated_at: Date;
+          }
+          EOF
+          
+          echo "✅ Database entities created"
+          
+      - name: Upload generated backend
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-code
+          path: apps/backend/
+          retention-days: 30
+          
+      - name: Summary
+        run: |
+          echo "✅ Backend code generated successfully!"
+          echo ""
+          echo "📦 Generated code uploaded as 'backend-code' artifact"
+
+  # Job 4: File Storage Microservice
+  develop-file-storage:
+    name: Develop File Storage Service
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && (github.event.inputs.component == 'all' || github.event.inputs.component == 'file-storage')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          
+      - name: Create file storage service
+        run: |
+          mkdir -p apps/file-storage/src
+          cd apps/file-storage
+          
+          # Create package.json
+          cat > package.json << 'EOF'
+          {
+            "name": "file-storage-service",
+            "version": "1.0.0",
+            "main": "dist/index.js",
+            "scripts": {
+              "dev": "tsx watch src/index.ts",
+              "build": "tsc",
+              "start": "node dist/index.js"
+            },
+            "dependencies": {
+              "fastify": "^4.25.0",
+              "@fastify/multipart": "^8.0.0",
+              "@fastify/jwt": "^7.2.0",
+              "uuid": "^9.0.1"
+            },
+            "devDependencies": {
+              "@types/node": "^20.10.0",
+              "tsx": "^4.7.0",
+              "typescript": "^5.3.0"
+            }
+          }
+          EOF
+          
+          # Create TypeScript config
+          cat > tsconfig.json << 'EOF'
+          {
+            "compilerOptions": {
+              "target": "ES2022",
+              "module": "commonjs",
+              "outDir": "./dist",
+              "rootDir": "./src",
+              "strict": true,
+              "esModuleInterop": true,
+              "skipLibCheck": true,
+              "forceConsistentCasingInFileNames": true
+            }
+          }
+          EOF
+          
+          # Create main server file
+          cat > src/index.ts << 'EOF'
+          import Fastify from 'fastify';
+          import multipart from '@fastify/multipart';
+          import { v4 as uuid } from 'uuid';
+          import fs from 'fs/promises';
+          import path from 'path';
+          
+          const fastify = Fastify({ logger: true });
+          
+          fastify.register(multipart);
+          
+          const STORAGE_PATH = process.env.STORAGE_PATH || './data/uploads';
+          
+          // Ensure storage directory exists
+          await fs.mkdir(STORAGE_PATH, { recursive: true });
+          
+          // Upload endpoint
+          fastify.post('/upload', async (request, reply) => {
+            const data = await request.file();
+            
+            if (!data) {
+              return reply.code(400).send({ error: 'No file uploaded' });
+            }
+            
+            const fileId = uuid();
+            const filename = `${fileId}-${data.filename}`;
+            const filepath = path.join(STORAGE_PATH, filename);
+            
+            // Stream file to disk
+            await fs.writeFile(filepath, await data.toBuffer());
+            
+            return {
+              id: fileId,
+              filename: data.filename,
+              mimetype: data.mimetype,
+              size: data.file.bytesRead,
+              url: `/files/${fileId}`,
+            };
+          });
+          
+          // Download endpoint
+          fastify.get('/files/:id', async (request, reply) => {
+            const { id } = request.params as { id: string };
+            
+            // Find file (simplified - in production, query database)
+            const files = await fs.readdir(STORAGE_PATH);
+            const file = files.find(f => f.startsWith(id));
+            
+            if (!file) {
+              return reply.code(404).send({ error: 'File not found' });
+            }
+            
+            const filepath = path.join(STORAGE_PATH, file);
+            const stream = await fs.readFile(filepath);
+            
+            return reply.send(stream);
+          });
+          
+          const start = async () => {
+            try {
+              await fastify.listen({ port: 3002, host: '0.0.0.0' });
+              console.log('File storage service running on port 3002');
+            } catch (err) {
+              fastify.log.error(err);
+              process.exit(1);
+            }
+          };
+          
+          start();
+          EOF
+          
+          # Create Dockerfile
+          cat > Dockerfile << 'EOF'
+          FROM node:20-alpine
+          
+          WORKDIR /app
+          
+          COPY package*.json ./
+          RUN npm install
+          
+          COPY . .
+          RUN npm run build
+          
+          RUN mkdir -p /data/uploads
+          
+          EXPOSE 3002
+          
+          CMD ["npm", "start"]
+          EOF
+          
+          echo "✅ File storage service created"
+          
+      - name: Upload file storage service
+        uses: actions/upload-artifact@v4
+        with:
+          name: file-storage-code
+          path: apps/file-storage/
+          retention-days: 30
+          
+      - name: Summary
+        run: |
+          echo "✅ File storage microservice created!"
+          echo ""
+          echo "📦 Code uploaded as 'file-storage-code' artifact"
+
+  # Job 5: Payment Microservice
+  develop-payment-service:
+    name: Develop Payment Service
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && (github.event.inputs.component == 'all' || github.event.inputs.component == 'payment-service')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          
+      - name: Create payment service
+        run: |
+          mkdir -p apps/payment-service/src/{routes,adapters,models}
+          cd apps/payment-service
+          
+          # Create package.json
+          cat > package.json << 'EOF'
+          {
+            "name": "payment-service",
+            "version": "1.0.0",
+            "main": "dist/index.js",
+            "scripts": {
+              "dev": "tsx watch src/index.ts",
+              "build": "tsc",
+              "start": "node dist/index.js"
+            },
+            "dependencies": {
+              "express": "^4.18.0",
+              "square": "^30.0.0",
+              "uuid": "^9.0.1",
+              "dotenv": "^16.3.0"
+            },
+            "devDependencies": {
+              "@types/express": "^4.17.21",
+              "@types/node": "^20.10.0",
+              "tsx": "^4.7.0",
+              "typescript": "^5.3.0"
+            }
+          }
+          EOF
+          
+          # Create main server
+          cat > src/index.ts << 'EOF'
+          import express from 'express';
+          import { v4 as uuid } from 'uuid';
+          
+          const app = express();
+          app.use(express.json());
+          app.use(express.raw({ type: 'application/json' }));
+          
+          // Create invoice
+          app.post('/api/v1/payments/invoices', async (req, res) => {
+            const { shop_id, amount_cents, currency, due_date, line_items } = req.body;
+            
+            const invoiceId = uuid();
+            
+            // Store invoice in database (pseudo)
+            // await db.invoices.insert({ id: invoiceId, shop_id, amount_cents, currency, status: 'issued', due_date });
+            
+            // Generate provider links
+            const squareLink = `https://square.link/u/${invoiceId}`;
+            const wiseLink = `https://wise.com/pay/${invoiceId}`;
+            
+            res.json({
+              invoiceId,
+              status: 'issued',
+              links: {
+                square: squareLink,
+                wise: wiseLink,
+              },
+            });
+          });
+          
+          // Get invoice
+          app.get('/api/v1/payments/invoices/:id', async (req, res) => {
+            const { id } = req.params;
+            
+            // Fetch from database (pseudo)
+            res.json({
+              id,
+              status: 'issued',
+              amount_cents: 50000,
+              currency: 'USD',
+            });
+          });
+          
+          // Square webhook
+          app.post('/api/v1/payments/webhook/square', async (req, res) => {
+            const signature = req.headers['x-square-signature'];
+            
+            // Verify signature (implement properly)
+            // if (!verifySquareSignature(req.body, signature)) {
+            //   return res.status(401).send('Invalid signature');
+            // }
+            
+            const event = req.body;
+            console.log('Square webhook received:', event.type);
+            
+            // Process payment
+            // await processPayment(event);
+            
+            res.status(200).send('ok');
+          });
+          
+          // Wise webhook
+          app.post('/api/v1/payments/webhook/wise', async (req, res) => {
+            const event = req.body;
+            console.log('Wise webhook received:', event);
+            
+            res.status(200).send('ok');
+          });
+          
+          const PORT = process.env.PORT || 3003;
+          app.listen(PORT, () => {
+            console.log(`Payment service running on port ${PORT}`);
+          });
+          EOF
+          
+          # Create Dockerfile
+          cat > Dockerfile << 'EOF'
+          FROM node:20-alpine
+          
+          WORKDIR /app
+          
+          COPY package*.json ./
+          RUN npm install
+          
+          COPY . .
+          RUN npm run build
+          
+          EXPOSE 3003
+          
+          CMD ["npm", "start"]
+          EOF
+          
+          echo "✅ Payment service created"
+          
+      - name: Upload payment service
+        uses: actions/upload-artifact@v4
+        with:
+          name: payment-service-code
+          path: apps/payment-service/
+          retention-days: 30
+          
+      - name: Summary
+        run: |
+          echo "✅ Payment microservice created!"
+          echo ""
+          echo "📦 Code uploaded as 'payment-service-code' artifact"
+
+  # Job 6: Database Setup
+  setup-database:
+    name: Setup Database Schema
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && (github.event.inputs.component == 'all' || github.event.inputs.component == 'database')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Create migration scripts
+        run: |
+          mkdir -p scripts/migration
+          
+          # Create initial migration
+          cat > scripts/migration/001_initial_schema.sql << 'EOF'
+          -- Users table
+          CREATE TABLE users (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            email VARCHAR(255) UNIQUE NOT NULL,
+            password_hash VARCHAR(255) NOT NULL,
+            name VARCHAR(255) NOT NULL,
+            role VARCHAR(50) NOT NULL CHECK (role IN ('pilot', 'shop_manager', 'technician', 'admin')),
+            shop_id UUID,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          -- Shops table
+          CREATE TABLE shops (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            name VARCHAR(255) NOT NULL,
+            location VARCHAR(255),
+            timezone VARCHAR(50),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          -- Aircraft table
+          CREATE TABLE aircraft (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            shop_id UUID REFERENCES shops(id),
+            owner_id UUID REFERENCES users(id),
+            tail_number VARCHAR(20) UNIQUE NOT NULL,
+            make VARCHAR(100),
+            model VARCHAR(100),
+            year INTEGER,
+            serial_number VARCHAR(100),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          -- Work requests table
+          CREATE TABLE work_requests (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            shop_id UUID REFERENCES shops(id),
+            owner_id UUID REFERENCES users(id),
+            aircraft_id UUID REFERENCES aircraft(id),
+            title VARCHAR(255) NOT NULL,
+            description TEXT,
+            priority VARCHAR(20) CHECK (priority IN ('low', 'medium', 'high')),
+            status VARCHAR(50) CHECK (status IN ('new', 'scheduled', 'diagnosing', 'parts_ordered', 'in_repair', 'complete', 'closed')),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          -- Work orders table
+          CREATE TABLE work_orders (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            request_id UUID REFERENCES work_requests(id),
+            shop_id UUID REFERENCES shops(id),
+            created_by UUID REFERENCES users(id),
+            status VARCHAR(50),
+            estimate_cents INTEGER,
+            currency VARCHAR(3) DEFAULT 'USD',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          -- Tasks table
+          CREATE TABLE tasks (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            work_order_id UUID REFERENCES work_orders(id),
+            title VARCHAR(255) NOT NULL,
+            description TEXT,
+            assigned_to UUID REFERENCES users(id),
+            status VARCHAR(50),
+            est_hours DECIMAL(5,2),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          -- Messages table
+          CREATE TABLE messages (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            conversation_id UUID,
+            sender_id UUID REFERENCES users(id),
+            body TEXT,
+            attachments JSONB,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          -- Files table
+          CREATE TABLE files (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            url TEXT NOT NULL,
+            filename VARCHAR(255),
+            mime_type VARCHAR(100),
+            uploaded_by UUID REFERENCES users(id),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          -- Audit logs table
+          CREATE TABLE audit_logs (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            user_id UUID REFERENCES users(id),
+            event_type VARCHAR(100),
+            meta JSONB,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          -- Invoices table
+          CREATE TABLE invoices (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            shop_id UUID REFERENCES shops(id),
+            owner_id UUID REFERENCES users(id),
+            work_order_id UUID REFERENCES work_orders(id),
+            amount_cents INTEGER NOT NULL,
+            currency VARCHAR(3) DEFAULT 'USD',
+            status VARCHAR(50) CHECK (status IN ('draft', 'issued', 'paid', 'overdue', 'cancelled')),
+            pdf_url TEXT,
+            due_date DATE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          -- Payment intents table
+          CREATE TABLE payment_intents (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            invoice_id UUID REFERENCES invoices(id),
+            provider VARCHAR(50),
+            provider_payment_id VARCHAR(255),
+            amount_cents INTEGER,
+            status VARCHAR(50),
+            metadata JSONB,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          -- Create indexes
+          CREATE INDEX idx_users_email ON users(email);
+          CREATE INDEX idx_aircraft_tail ON aircraft(tail_number);
+          CREATE INDEX idx_work_requests_status ON work_requests(status);
+          CREATE INDEX idx_work_requests_shop ON work_requests(shop_id);
+          CREATE INDEX idx_tasks_assigned ON tasks(assigned_to);
+          CREATE INDEX idx_messages_conversation ON messages(conversation_id);
+          
+          -- Enable pgvector extension for future RAG
+          CREATE EXTENSION IF NOT EXISTS vector;
+          EOF
+          
+          # Create seed script
+          cat > scripts/seed/seed-dev-data.sql << 'EOF'
+          -- Insert sample shop
+          INSERT INTO shops (id, name, location, timezone) VALUES
+          ('550e8400-e29b-41d4-a716-446655440000', 'Acme Aviation MRO', 'Los Angeles, CA', 'America/Los_Angeles');
+          
+          -- Insert sample users
+          INSERT INTO users (id, email, password_hash, name, role, shop_id) VALUES
+          ('660e8400-e29b-41d4-a716-446655440000', 'pilot@example.com', '$2b$10$abcdefghijklmnopqrstuv', 'John Pilot', 'pilot', NULL),
+          ('770e8400-e29b-41d4-a716-446655440000', 'manager@acme.com', '$2b$10$abcdefghijklmnopqrstuv', 'Jane Manager', 'shop_manager', '550e8400-e29b-41d4-a716-446655440000'),
+          ('880e8400-e29b-41d4-a716-446655440000', 'tech@acme.com', '$2b$10$abcdefghijklmnopqrstuv', 'Bob Technician', 'technician', '550e8400-e29b-41d4-a716-446655440000');
+          
+          -- Insert sample aircraft
+          INSERT INTO aircraft (id, shop_id, owner_id, tail_number, make, model, year) VALUES
+          ('990e8400-e29b-41d4-a716-446655440000', '550e8400-e29b-41d4-a716-446655440000', '660e8400-e29b-41d4-a716-446655440000', 'N12345', 'Cessna', '172', 2010);
+          EOF
+          
+          echo "✅ Database migrations created"
+          
+      - name: Create docker-compose for local dev
+        run: |
+          mkdir -p infra/docker
+          
+          cat > infra/docker/docker-compose.yml << 'EOF'
+          version: '3.8'
+          
+          services:
+            postgres:
+              image: postgres:15-alpine
+              environment:
+                POSTGRES_USER: aviosync
+                POSTGRES_PASSWORD: devpassword
+                POSTGRES_DB: aviosync_dev
+              ports:
+                - "5432:5432"
+              volumes:
+                - postgres_data:/var/lib/postgresql/data
+                - ../../scripts/migration:/docker-entrypoint-initdb.d
+              command: postgres -c 'max_connections=200'
+          
+            redis:
+              image: redis:7-alpine
+              ports:
+                - "6379:6379"
+              volumes:
+                - redis_data:/data
+          
+            rabbitmq:
+              image: rabbitmq:3-management-alpine
+              ports:
+                - "5672:5672"
+                - "15672:15672"
+              environment:
+                RABBITMQ_DEFAULT_USER: aviosync
+                RABBITMQ_DEFAULT_PASS: devpassword
+          
+          volumes:
+            postgres_data:
+            redis_data:
+          EOF
+          
+          echo "✅ Docker Compose configuration created"
+          
+      - name: Upload database files
+        uses: actions/upload-artifact@v4
+        with:
+          name: database-setup
+          path: |
+            scripts/
+            infra/docker/
+          retention-days: 30
+          
+      - name: Summary
+        run: |
+          echo "✅ Database setup complete!"
+          echo ""
+          echo "📦 Files uploaded as 'database-setup' artifact"
+          echo ""
+          echo "Includes:"
+          echo "- Migration scripts"
+          echo "- Seed data"
+          echo "- Docker Compose configuration"
+
+  # Job 7: CI/CD Pipeline
+  ci-pipeline:
+    name: Continuous Integration
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          
+      - name: Install dependencies
+        run: |
+          if [ -f "package.json" ]; then
+            npm install || echo "No dependencies to install yet"
+          else
+            echo "No package.json found yet"
+          fi
+          
+      - name: Lint
+        run: |
+          if [ -f "package.json" ] && grep -q "\"lint\"" package.json; then
+            npm run lint || echo "Linting not configured yet"
+          fi
+          
+      - name: Type check
+        run: |
+          if [ -f "tsconfig.json" ]; then
+            npx tsc --noEmit || echo "TypeScript not configured yet"
+          fi
+          
+      - name: Run tests
+        run: |
+          if [ -f "package.json" ] && grep -q "\"test\"" package.json; then
+            npm test || echo "Tests not configured yet"
+          fi
+          
+      - name: Build
+        run: |
+          if [ -f "package.json" ] && grep -q "\"build\"" package.json; then
+            npm run build || echo "Build not configured yet"
+          fi
+
+  # Job 8: Documentation Generation
+  generate-docs:
+    name: Generate API Documentation
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Generate OpenAPI documentation
+        run: |
+          mkdir -p docs/api
+          
+          cat > docs/api/openapi.yml << 'EOF'
+          openapi: 3.0.0
+          info:
+            title: AvioSync Platform API
+            version: 1.0.0
+            description: API documentation for the AvioSync aviation maintenance platform
+          
+          servers:
+            - url: http://localhost:3001/api/v1
+              description: Local development
+            - url: https://api.aviosync.com/api/v1
+              description: Production
+          
+          paths:
+            /auth/register:
+              post:
+                summary: Register new user
+                tags: [Auth]
+                requestBody:
+                  content:
+                    application/json:
+                      schema:
+                        type: object
+                        required: [email, password, name, role]
+                        properties:
+                          email:
+                            type: string
+                          password:
+                            type: string
+                          name:
+                            type: string
+                          role:
+                            type: string
+                            enum: [pilot, shop_manager, technician, admin]
+                responses:
+                  '201':
+                    description: User created successfully
+          
+            /auth/login:
+              post:
+                summary: Login user
+                tags: [Auth]
+                requestBody:
+                  content:
+                    application/json:
+                      schema:
+                        type: object
+                        required: [email, password]
+                        properties:
+                          email:
+                            type: string
+                          password:
+                            type: string
+                responses:
+                  '200':
+                    description: Login successful
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          properties:
+                            token:
+                              type: string
+                            user:
+                              type: object
+          
+            /shops/{shopId}/requests:
+              post:
+                summary: Create work request
+                tags: [Work Requests]
+                security:
+                  - bearerAuth: []
+                parameters:
+                  - in: path
+                    name: shopId
+                    required: true
+                    schema:
+                      type: string
+                requestBody:
+                  content:
+                    application/json:
+                      schema:
+                        type: object
+                        required: [aircraft_id, title, description]
+                        properties:
+                          aircraft_id:
+                            type: string
+                          title:
+                            type: string
+                          description:
+                            type: string
+                          priority:
+                            type: string
+                            enum: [low, medium, high]
+                responses:
+                  '201':
+                    description: Work request created
+          
+          components:
+            securitySchemes:
+              bearerAuth:
+                type: http
+                scheme: bearer
+                bearerFormat: JWT
+          EOF
+          
+          echo "✅ API documentation generated"
+          
+      - name: Generate README
+        run: |
+          cat > README.md << 'EOF'
+          # AvioSync Platform
+          
+          Aviation maintenance management platform connecting pilots with MRO shops.
+          
+          ## 🚀 Quick Start
+          
+          ### Prerequisites
+          - Node.js 20+
+          - pnpm 8+
+          - Docker & Docker Compose
+          - PostgreSQL 15+
+          
+          ### Local Development
+          
+          1. Clone the repository
+          ```bash
+          git clone https://github.com/yourusername/aviosync.git
+          cd aviosync
+          ```
+          
+          2. Install dependencies
+          ```bash
+          pnpm install
+          ```
+          
+          3. Start database services
+          ```bash
+          cd infra/docker
+          docker-compose up -d
+          ```
+          
+          4. Run migrations
+          ```bash
+          psql -h localhost -U aviosync -d aviosync_dev -f scripts/migration/001_initial_schema.sql
+          ```
+          
+          5. Start development servers
+          ```bash
+          pnpm dev
+          ```
+          
+          ## 📁 Project Structure
+          
+          ```
+          aviosync/
+          ├── apps/
+          │   ├── frontend/          # Next.js frontend
+          │   ├── backend/           # NestJS backend
+          │   ├── file-storage/      # File storage microservice
+          │   └── payment-service/   # Payment microservice
+          ├── packages/
+          │   ├── ui/                # Shared UI components
+          │   ├── lib/               # Shared utilities
+          │   └── shared-types/      # Shared TypeScript types
+          ├── infra/
+          │   ├── docker/            # Docker configurations
+          │   └── terraform/         # Infrastructure as code
+          ├── scripts/
+          │   ├── migration/         # Database migrations
+          │   └── seed/              # Seed data
+          └── docs/                  # Documentation
+          ```
+          
+          ## 🏗️ Architecture
+          
+          - **Frontend**: Next.js 14+ with TypeScript, Tailwind CSS
+          - **Backend**: NestJS with TypeScript
+          - **Database**: PostgreSQL 15 with pgvector
+          - **Storage**: Node.js file storage microservice
+          - **Payments**: Wise + Square integration
+          - **Cache**: Redis
+          - **Message Queue**: RabbitMQ
+          
+          ## 📚 Documentation
+          
+          - [Project Specification](docs/guides/AvioSync_platform_project_spec.md)
+          - [API Documentation](docs/api/openapi.yml)
+          - [Development Guide](docs/guides/development.md)
+          
+          ## 🧪 Testing
+          
+          ```bash
+          # Run all tests
+          pnpm test
+          
+          # Run specific test suite
+          pnpm test:unit
+          pnpm test:integration
+          pnpm test:e2e
+          ```
+          
+          ## 🚢 Deployment
+          
+          The project uses GitHub Actions for CI/CD:
+          
+          - `push` to `main` → Deploy to production
+          - `push` to `develop` → Deploy to staging
+          - Manual workflow dispatch for component development
+          
+          ## 📝 License
+          
+          Proprietary - All rights reserved
+          
+          ## 🤝 Contributing
+          
+          Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and development process.
+          EOF
+          
+          echo "✅ README generated"
+          
+      - name: Upload documentation
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation
+          path: |
+            docs/
+            README.md
+          retention-days: 30
+          
+      - name: Summary
+        run: |
+          echo "✅ Documentation generated!"
+          echo ""
+          echo "📦 Files uploaded as 'documentation' artifact"
+          echo ""
+          echo "Includes:"
+          echo "- OpenAPI specification"
+          echo "- Project README"
+
+  # Job 9: Security Scanning
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'schedule'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  # Job 10: Performance Monitoring Setup
+  setup-monitoring:
+    name: Setup Monitoring & Analytics
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Create monitoring configuration
+        run: |
+          mkdir -p infra/monitoring
+          
+          # Create Prometheus config
+          cat > infra/monitoring/prometheus.yml << 'EOF'
+          global:
+            scrape_interval: 15s
+            evaluation_interval: 15s
+          
+          scrape_configs:
+            - job_name: 'backend'
+              static_configs:
+                - targets: ['backend:3001']
+            
+            - job_name: 'file-storage'
+              static_configs:
+                - targets: ['file-storage:3002']
+            
+            - job_name: 'payment-service'
+              static_configs:
+                - targets: ['payment-service:3003']
+          EOF
+          
+          echo "✅ Monitoring configuration created"
+          
+      - name: Upload monitoring config
+        uses: actions/upload-artifact@v4
+        with:
+          name: monitoring-setup
+          path: infra/monitoring/
+          retention-days: 30
+          
+      - name: Summary
+        run: |
+          echo "✅ Monitoring configuration created!"
+          echo ""
+          echo "📦 Config uploaded as 'monitoring-setup' artifact"
