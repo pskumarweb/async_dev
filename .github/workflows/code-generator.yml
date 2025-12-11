@@ -25,13 +25,12 @@ env:
 jobs:
   generate-code:
     name: Generate Code
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.PAT_TOKEN }}
           fetch-depth: 0
       
       - name: Setup Node.js
