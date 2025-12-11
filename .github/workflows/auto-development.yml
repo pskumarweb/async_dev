@@ -52,7 +52,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          token: ${{ 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 }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
           
       - name: Create project structure
         run: |
@@ -172,17 +173,15 @@ jobs:
           
       - name: Commit and push generated files
         run: |
-          echo "✅ Project structure created successfully!"
-          echo ""
-          echo "📦 Generated files have been uploaded as artifacts."
-          echo ""
-          echo "To use the generated code:"
-          echo "1. Download the 'project-structure' artifact from this workflow run"
-          echo "2. Extract it to your local repository"
-          echo "3. Commit and push manually:"
-          echo "   git add -A"
-          echo "   git commit -m 'chore: initialize repository structure'"
-          echo "   git push"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add -A
+          if git diff-index --quiet HEAD --; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: initialize repository structure [skip ci]"
+            git push
+          fi
 
   # Job 2: Frontend Development
   develop-frontend:
@@ -284,13 +283,21 @@ jobs:
           path: apps/frontend/
           retention-days: 30
           
+      - name: Commit and push frontend code
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add apps/frontend/
+          if git diff-index --quiet HEAD --; then
+            echo "No changes to commit"
+          else
+            git commit -m "feat: add frontend app [skip ci]"
+            git push
+          fi
+          
       - name: Summary
         run: |
-          echo "✅ Frontend code generated successfully!"
-          echo ""
-          echo "📦 Generated code uploaded as 'frontend-code' artifact"
-          echo ""
-          echo "Download and commit manually, or enable workflow write permissions."
+          echo "✅ Frontend code generated and committed!"
 
   # Job 3: Backend Development (NestJS)
   develop-backend:
@@ -444,11 +451,21 @@ jobs:
           path: apps/backend/
           retention-days: 30
           
+      - name: Commit and push backend code
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add apps/backend/
+          if git diff-index --quiet HEAD --; then
+            echo "No changes to commit"
+          else
+            git commit -m "feat: add backend app [skip ci]"
+            git push
+          fi
+          
       - name: Summary
         run: |
-          echo "✅ Backend code generated successfully!"
-          echo ""
-          echo "📦 Generated code uploaded as 'backend-code' artifact"
+          echo "✅ Backend code generated and committed!"
 
   # Job 4: File Storage Microservice
   develop-file-storage:
@@ -614,11 +631,21 @@ jobs:
           path: apps/file-storage/
           retention-days: 30
           
+      - name: Commit and push file storage code
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add apps/file-storage/
+          if git diff-index --quiet HEAD --; then
+            echo "No changes to commit"
+          else
+            git commit -m "feat: add file storage service [skip ci]"
+            git push
+          fi
+          
       - name: Summary
         run: |
-          echo "✅ File storage microservice created!"
-          echo ""
-          echo "📦 Code uploaded as 'file-storage-code' artifact"
+          echo "✅ File storage microservice created and committed!"
 
   # Job 5: Payment Microservice
   develop-payment-service:
@@ -772,11 +799,21 @@ jobs:
           path: apps/payment-service/
           retention-days: 30
           
+      - name: Commit and push payment service code
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add apps/payment-service/
+          if git diff-index --quiet HEAD --; then
+            echo "No changes to commit"
+          else
+            git commit -m "feat: add payment service [skip ci]"
+            git push
+          fi
+          
       - name: Summary
         run: |
-          echo "✅ Payment microservice created!"
-          echo ""
-          echo "📦 Code uploaded as 'payment-service-code' artifact"
+          echo "✅ Payment microservice created and committed!"
 
   # Job 6: Database Setup
   setup-database:
@@ -1011,16 +1048,21 @@ jobs:
             infra/docker/
           retention-days: 30
           
+      - name: Commit and push database files
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add scripts/ infra/docker/
+          if git diff-index --quiet HEAD --; then
+            echo "No changes to commit"
+          else
+            git commit -m "feat: add database setup [skip ci]"
+            git push
+          fi
+          
       - name: Summary
         run: |
-          echo "✅ Database setup complete!"
-          echo ""
-          echo "📦 Files uploaded as 'database-setup' artifact"
-          echo ""
-          echo "Includes:"
-          echo "- Migration scripts"
-          echo "- Seed data"
-          echo "- Docker Compose configuration"
+          echo "✅ Database setup complete and committed!"
 
   # Job 7: CI/CD Pipeline
   ci-pipeline:
@@ -1324,15 +1366,21 @@ jobs:
             README.md
           retention-days: 30
           
+      - name: Commit and push documentation
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add docs/ README.md
+          if git diff-index --quiet HEAD --; then
+            echo "No changes to commit"
+          else
+            git commit -m "docs: generate documentation [skip ci]"
+            git push
+          fi
+          
       - name: Summary
         run: |
-          echo "✅ Documentation generated!"
-          echo ""
-          echo "📦 Files uploaded as 'documentation' artifact"
-          echo ""
-          echo "Includes:"
-          echo "- OpenAPI specification"
-          echo "- Project README"
+          echo "✅ Documentation generated and committed!"
 
 
   # Job 9: Security Scanning
@@ -1408,8 +1456,18 @@ jobs:
           path: infra/monitoring/
           retention-days: 30
           
+      - name: Commit and push monitoring config
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add infra/monitoring/
+          if git diff-index --quiet HEAD --; then
+            echo "No changes to commit"
+          else
+            git commit -m "feat: add monitoring setup [skip ci]"
+            git push
+          fi
+          
       - name: Summary
         run: |
-          echo "✅ Monitoring configuration created!"
-          echo ""
-          echo "📦 Config uploaded as 'monitoring-setup' artifact"
+          echo "✅ Monitoring configuration created and committed!"

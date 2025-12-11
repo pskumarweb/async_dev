@@ -19,7 +19,7 @@ on:
           - analytics-dashboard
 
 permissions:
-  contents: read
+  contents: write
   actions: read
       
 env:
@@ -149,9 +149,13 @@ jobs:
         run: |
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
-          
-          
-          
+          git add -A
+          if git diff-index --quiet HEAD --; then
+            echo "No changes to commit"
+          else
+            git commit -m "feat: add work request form [skip ci]"
+            git push
+          fi
 
   develop-shop-dashboard:
     name: Develop Shop Dashboard
@@ -160,6 +164,9 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
       
       - name: Generate shop dashboard
         run: |
@@ -260,9 +267,13 @@ jobs:
         run: |
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
-          
-          
-          
+          git add -A
+          if git diff-index --quiet HEAD --; then
+            echo "No changes to commit"
+          else
+            git commit -m "feat: add shop dashboard [skip ci]"
+            git push
+          fi
 
   develop-user-authentication:
     name: Develop User Authentication
@@ -271,6 +282,9 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
       
       - name: Generate auth components
         run: |
@@ -393,9 +407,13 @@ jobs:
         run: |
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
-          
-          
-          
+          git add -A
+          if git diff-index --quiet HEAD --; then
+            echo "No changes to commit"
+          else
+            git commit -m "feat: add user authentication [skip ci]"
+            git push
+          fi
 
   develop-file-upload:
     name: Develop File Upload System
@@ -404,6 +422,9 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
       
       - name: Generate file upload components
         run: |
@@ -541,9 +562,13 @@ jobs:
         run: |
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
-          
-          
-          
+          git add -A
+          if git diff-index --quiet HEAD --; then
+            echo "No changes to commit"
+          else
+            git commit -m "feat: add file upload system [skip ci]"
+            git push
+          fi
 
   develop-messaging-system:
     name: Develop Messaging System
@@ -552,6 +577,9 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
       
       - name: Generate messaging components
         run: |
