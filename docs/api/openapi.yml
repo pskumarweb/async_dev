@@ -1,0 +1,29 @@
+openapi: 3.0.0
+info:
+  title: AvioSync Platform API
+  version: 1.0.0
+  description: API for aviation maintenance management
+
+servers:
+  - url: http://localhost:3001/api/v1
+    description: Local development
+
+paths:
+  /auth/login:
+    post:
+      summary: Login user
+      tags: [Auth]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
