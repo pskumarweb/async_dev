@@ -1,0 +1,454 @@
+name: Code Generator
+
+on:
+  workflow_dispatch:
+    inputs:
+      component:
+        description: 'Component to generate'
+        required: true
+        type: choice
+        options:
+          - all
+          - structure
+          - frontend
+          - backend
+          - services
+          - database
+          - docs
+
+permissions:
+  contents: write
+
+env:
+  NODE_VERSION: '20.x'
+
+jobs:
+  generate-code:
+    name: Generate Code
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          fetch-depth: 0
+      
+      - name: Setup Node.js
+        if: github.event.inputs.component == 'all' || github.event.inputs.component == 'frontend' || github.event.inputs.component == 'backend' || github.event.inputs.component == 'services'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      
+      - name: Configure Git
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+      
+      # Step 1: Project Structure
+      - name: Generate Project Structure
+        if: github.event.inputs.component == 'all' || github.event.inputs.component == 'structure'
+        run: |
+          echo "📁 Creating project structure..."
+          
+          # Create directories
+          mkdir -p apps/{frontend,backend,file-storage,payment-service}
+          mkdir -p packages/{ui,lib,shared-types}
+          mkdir -p infra/{terraform,docker,monitoring}
+          mkdir -p scripts/{seed,migration}
+          mkdir -p tests/{unit,integration,e2e}
+          mkdir -p docs/{api,guides}
+          
+          # Create root package.json if doesn't exist
+          if [ ! -f "package.json" ]; then
+            cat > package.json << 'EOF'
+          {
+            "name": "aviosync-platform",
+            "version": "0.1.0",
+            "private": true,
+            "workspaces": ["apps/*", "packages/*"],
+            "scripts": {
+              "dev": "turbo run dev",
+              "build": "turbo run build",
+              "test": "turbo run test",
+              "lint": "turbo run lint"
+            },
+            "devDependencies": {
+              "turbo": "^1.11.0",
+              "prettier": "^3.1.0",
+              "typescript": "^5.3.0"
+            }
+          }
+          EOF
+          fi
+          
+          # Create turbo.json if doesn't exist
+          if [ ! -f "turbo.json" ]; then
+            cat > turbo.json << 'EOF'
+          {
+            "$schema": "https://turbo.build/schema.json",
+            "pipeline": {
+              "build": {
+                "dependsOn": ["^build"],
+                "outputs": [".next/**", "dist/**", "build/**"]
+              },
+              "test": {"dependsOn": ["build"]},
+              "lint": {},
+              "dev": {"cache": false, "persistent": true}
+            }
+          }
+          EOF
+          fi
+          
+          git add -A
+          git diff-index --quiet HEAD || git commit -m "chore: initialize project structure [skip ci]"
+          
+      # Step 2: Frontend
+      - name: Generate Frontend (Next.js)
+        if: github.event.inputs.component == 'all' || github.event.inputs.component == 'frontend'
+        run: |
+          echo "⚛️ Creating Next.js frontend..."
+          
+          if [ ! -d "apps/frontend/src" ]; then
+            cd apps/frontend
+            npx --yes create-next-app@latest . --typescript --tailwind --app --src-dir --import-alias "@/*" --yes || true
+            
+            # Create components
+            mkdir -p src/components/{ui,layout} src/lib src/hooks src/types
+            
+            cat > src/components/layout/TopNav.tsx << 'EOF'
+          export default function TopNav() {
+            return (
+              <nav className="bg-white shadow-sm border-b">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                  <div className="flex justify-between h-16">
+                    <div className="flex items-center">
+                      <h1 className="text-xl font-bold">AvioSync</h1>
+                    </div>
+                  </div>
+                </div>
+              </nav>
+            );
+          }
+          EOF
+            
+            cat > src/lib/api-client.ts << 'EOF'
+          import axios from 'axios';
+          
+          const apiClient = axios.create({
+            baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1',
+            headers: {'Content-Type': 'application/json'}
+          });
+          
+          apiClient.interceptors.request.use((config) => {
+            const token = localStorage.getItem('token');
+            if (token) config.headers.Authorization = `Bearer ${token}`;
+            return config;
+          });
+          
+          export default apiClient;
+          EOF
+            
+            cd ../..
+          fi
+          
+          git add apps/frontend/
+          git diff-index --quiet HEAD || git commit -m "feat: add Next.js frontend [skip ci]"
+      
+      # Step 3: Backend
+      - name: Generate Backend (NestJS)
+        if: github.event.inputs.component == 'all' || github.event.inputs.component == 'backend'
+        run: |
+          echo "🚀 Creating NestJS backend..."
+          
+          if [ ! -d "apps/backend/src" ]; then
+            cd apps/backend
+            npm install -g @nestjs/cli
+            nest new . --skip-git --package-manager npm || true
+            
+            # Generate modules
+            nest g module auth --no-spec
+            nest g module users --no-spec
+            nest g service auth --no-spec
+            nest g controller auth --no-spec
+            
+            mkdir -p src/entities
+            
+            cat > src/entities/user.entity.ts << 'EOF'
+          import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
+          
+          @Entity('users')
+          export class User {
+            @PrimaryGeneratedColumn('uuid')
+            id: string;
+          
+            @Column({ unique: true })
+            email: string;
+          
+            @Column()
+            password_hash: string;
+          
+            @Column()
+            name: string;
+          
+            @Column({ type: 'varchar' })
+            role: 'pilot' | 'shop_manager' | 'technician' | 'admin';
+          
+            @CreateDateColumn()
+            created_at: Date;
+          }
+          EOF
+            
+            cd ../..
+          fi
+          
+          git add apps/backend/
+          git diff-index --quiet HEAD || git commit -m "feat: add NestJS backend [skip ci]"
+      
+      # Step 4: Microservices
+      - name: Generate Microservices
+        if: github.event.inputs.component == 'all' || github.event.inputs.component == 'services'
+        run: |
+          echo "🔧 Creating microservices..."
+          
+          # File Storage Service
+          mkdir -p apps/file-storage/src
+          cd apps/file-storage
+          
+          cat > package.json << 'EOF'
+          {
+            "name": "file-storage-service",
+            "version": "1.0.0",
+            "main": "dist/index.js",
+            "scripts": {
+              "dev": "tsx watch src/index.ts",
+              "build": "tsc",
+              "start": "node dist/index.js"
+            },
+            "dependencies": {
+              "fastify": "^4.25.0",
+              "@fastify/multipart": "^8.0.0",
+              "uuid": "^9.0.1"
+            },
+            "devDependencies": {
+              "@types/node": "^20.10.0",
+              "tsx": "^4.7.0",
+              "typescript": "^5.3.0"
+            }
+          }
+          EOF
+          
+          cat > src/index.ts << 'EOF'
+          import Fastify from 'fastify';
+          import multipart from '@fastify/multipart';
+          
+          const fastify = Fastify({ logger: true });
+          fastify.register(multipart);
+          
+          fastify.post('/upload', async (request, reply) => {
+            const data = await request.file();
+            if (!data) return reply.code(400).send({ error: 'No file uploaded' });
+            
+            return { id: 'file-id', filename: data.filename, url: '/files/file-id' };
+          });
+          
+          fastify.listen({ port: 3002, host: '0.0.0.0' });
+          EOF
+          
+          cd ../..
+          
+          # Payment Service
+          mkdir -p apps/payment-service/src
+          cd apps/payment-service
+          
+          cat > package.json << 'EOF'
+          {
+            "name": "payment-service",
+            "version": "1.0.0",
+            "main": "dist/index.js",
+            "scripts": {
+              "dev": "tsx watch src/index.ts",
+              "build": "tsc",
+              "start": "node dist/index.js"
+            },
+            "dependencies": {
+              "express": "^4.18.0",
+              "square": "^30.0.0",
+              "uuid": "^9.0.1"
+            },
+            "devDependencies": {
+              "@types/express": "^4.17.21",
+              "@types/node": "^20.10.0",
+              "tsx": "^4.7.0",
+              "typescript": "^5.3.0"
+            }
+          }
+          EOF
+          
+          cat > src/index.ts << 'EOF'
+          import express from 'express';
+          
+          const app = express();
+          app.use(express.json());
+          
+          app.post('/api/v1/payments/invoices', async (req, res) => {
+            const { amount_cents, currency } = req.body;
+            res.json({ invoiceId: 'inv-123', status: 'issued', amount_cents, currency });
+          });
+          
+          app.listen(3003, () => console.log('Payment service on port 3003'));
+          EOF
+          
+          cd ../..
+          
+          git add apps/file-storage/ apps/payment-service/
+          git diff-index --quiet HEAD || git commit -m "feat: add microservices [skip ci]"
+      
+      # Step 5: Database
+      - name: Generate Database Setup
+        if: github.event.inputs.component == 'all' || github.event.inputs.component == 'database'
+        run: |
+          echo "🗄️ Creating database setup..."
+          
+          mkdir -p scripts/migration scripts/seed infra/docker
+          
+          cat > scripts/migration/001_initial_schema.sql << 'EOF'
+          CREATE TABLE users (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            email VARCHAR(255) UNIQUE NOT NULL,
+            password_hash VARCHAR(255) NOT NULL,
+            name VARCHAR(255) NOT NULL,
+            role VARCHAR(50) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          CREATE TABLE work_requests (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            title VARCHAR(255) NOT NULL,
+            description TEXT,
+            priority VARCHAR(20),
+            status VARCHAR(50),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          CREATE INDEX idx_users_email ON users(email);
+          CREATE INDEX idx_work_requests_status ON work_requests(status);
+          EOF
+          
+          cat > infra/docker/docker-compose.yml << 'EOF'
+          version: '3.8'
+          services:
+            postgres:
+              image: postgres:15-alpine
+              environment:
+                POSTGRES_USER: aviosync
+                POSTGRES_PASSWORD: devpassword
+                POSTGRES_DB: aviosync_dev
+              ports:
+                - "5432:5432"
+              volumes:
+                - postgres_data:/var/lib/postgresql/data
+          
+            redis:
+              image: redis:7-alpine
+              ports:
+                - "6379:6379"
+          
+          volumes:
+            postgres_data:
+          EOF
+          
+          git add scripts/ infra/docker/
+          git diff-index --quiet HEAD || git commit -m "feat: add database setup [skip ci]"
+      
+      # Step 6: Documentation
+      - name: Generate Documentation
+        if: github.event.inputs.component == 'all' || github.event.inputs.component == 'docs'
+        run: |
+          echo "📚 Creating documentation..."
+          
+          mkdir -p docs/api
+          
+          cat > docs/api/openapi.yml << 'EOF'
+          openapi: 3.0.0
+          info:
+            title: AvioSync Platform API
+            version: 1.0.0
+            description: API for aviation maintenance management
+          
+          servers:
+            - url: http://localhost:3001/api/v1
+              description: Local development
+          
+          paths:
+            /auth/login:
+              post:
+                summary: Login user
+                tags: [Auth]
+                requestBody:
+                  content:
+                    application/json:
+                      schema:
+                        type: object
+                        required: [email, password]
+                        properties:
+                          email:
+                            type: string
+                          password:
+                            type: string
+                responses:
+                  '200':
+                    description: Login successful
+          EOF
+          
+          cat > README.md << 'EOF'
+          # AvioSync Platform
+          
+          Aviation maintenance management platform connecting pilots with MRO shops.
+          
+          ## Quick Start
+          
+          ```bash
+          # Install dependencies
+          npm install
+          
+          # Start development
+          npm run dev
+          ```
+          
+          ## Architecture
+          
+          - **Frontend**: Next.js 14+ with TypeScript
+          - **Backend**: NestJS with TypeScript
+          - **Database**: PostgreSQL 15
+          - **Services**: File Storage, Payment Processing
+          
+          ## Documentation
+          
+          - [API Documentation](docs/api/openapi.yml)
+          - [Development Guide](docs/guides/development.md)
+          
+          ## License
+          
+          Proprietary - All rights reserved
+          EOF
+          
+          git add docs/ README.md
+          git diff-index --quiet HEAD || git commit -m "docs: add documentation [skip ci]"
+      
+      # Final Push
+      - name: Push all changes
+        run: |
+          git push origin main
+          
+          echo "✅ Code generation complete!"
+          echo ""
+          echo "Generated components:"
+          echo "- Project structure"
+          echo "- Frontend (Next.js)"
+          echo "- Backend (NestJS)"
+          echo "- Microservices (File Storage, Payment)"
+          echo "- Database setup"
+          echo "- Documentation"
+          echo ""
+          echo "All changes have been pushed to the repository!"
