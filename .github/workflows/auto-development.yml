@@ -52,7 +52,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          token: "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"
+          token: ${{ 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 }}
           
       - name: Create project structure
         run: |
